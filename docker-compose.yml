@@ -1,0 +1,40 @@
+# version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: loghub
+      POSTGRES_USER: loghub
+      POSTGRES_PASSWORD: loghub
+      TZ: Asia/Shanghai
+    volumes:
+      - ./data/pgdata:/var/lib/postgresql/data
+    ports:
+      - "5431:5432"
+    command: >
+      postgres
+        --timezone=Asia/Shanghai
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U loghub"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      LOG__DATABASE__URL: postgres://loghub:loghub@postgres:5432/loghub
+      LOG__AUTH__JWT_SECRET: loghub-secret-change-in-production
+      LOG__AUTH__JWT_EXPIRES_IN: "86400"
+      LOG__SERVER__HOST: 0.0.0.0
+      LOG__SERVER__PORT: "8080"
+      LOG__ADMIN__USERNAME: admin
+      LOG__ADMIN__PASSWORD: admin123
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy

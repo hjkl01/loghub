@@ -1,0 +1,9 @@
+target/
+frontend/dist/
+frontend/node_modules/
+.env
+*.swp
+*.swo
+.idea/
+.vscode/
+*.iml

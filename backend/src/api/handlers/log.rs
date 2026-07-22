@@ -1,0 +1,179 @@
+use axum::extract::{Query, State};
+use axum::Json;
+use chrono::{DateTime, Utc};
+
+use crate::models::log::IngestLogRequest;
+use crate::repository::log_repo;
+use crate::websocket::LogEvent;
+use crate::AppState;
+
+#[derive(serde::Deserialize, utoipa::IntoParams)]
+pub struct LogQueryString {
+    /// System name filter
+    pub system: Option<String>,
+    /// Service name filter
+    pub service: Option<String>,
+    /// Log level filter (e.g. ERROR, WARN, INFO)
+    pub level: Option<String>,
+    /// Keyword search (ILIKE on message)
+    pub keyword: Option<String>,
+    /// Start time (RFC3339)
+    pub start_time: Option<String>,
+    /// End time (RFC3339)
+    pub end_time: Option<String>,
+    /// Page number (default 1)
+    pub page: Option<i64>,
+    /// Page size (default 20, max 100)
+    pub size: Option<i64>,
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/logs",
+    tag = "logs",
+    request_body = IngestLogRequest,
+    responses(
+        (status = 200, description = "Log ingested successfully", body = Value),
+        (status = 500, description = "Internal server error", body = Value),
+    )
+)]
+pub async fn ingest(
+    State(state): State<AppState>,
+    Json(req): Json<IngestLogRequest>,
+) -> Result<Json<serde_json::Value>, (axum::http::StatusCode, Json<serde_json::Value>)> {
+    let extra = req.extra.unwrap_or(serde_json::Value::Object(Default::default()));
+
+    let log_id = log_repo::insert_log(
+        &state.pool,
+        req.timestamp,
+        &req.level,
+        &req.message,
+        &req.system,
+        &req.service,
+        req.trace_id.as_deref(),
+        req.request_id.as_deref(),
+        &extra,
+    )
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to insert log: {e}");
+        (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "code": 20001,
+                "message": "Failed to ingest log",
+            })),
+        )
+    })?;
+
+    let event = LogEvent {
+        id: log_id,
+        log_time: req.timestamp,
+        level: req.level.clone(),
+        message: req.message.clone(),
+        system: req.system.clone(),
+        service: req.service.clone(),
+        trace_id: req.trace_id.clone(),
+        request_id: req.request_id.clone(),
+        extra: extra.clone(),
+    };
+
+    if let Err(e) = state.ws_state.tx.send(event) {
+        tracing::warn!("WebSocket broadcast failed: {e}");
+    }
+
+    Ok(Json(serde_json::json!({
+        "code": 0,
+        "message": "ok",
+        "data": {
+            "id": log_id,
+        }
+    })))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/logs",
+    tag = "logs",
+    params(LogQueryString),
+    responses(
+        (status = 200, description = "Log list with pagination", body = Value),
+        (status = 400, description = "Invalid parameters", body = Value),
+    )
+)]
+pub async fn list(
+    State(state): State<AppState>,
+    Query(params): Query<LogQueryString>,
+) -> Result<Json<serde_json::Value>, (axum::http::StatusCode, Json<serde_json::Value>)> {
+    let start_time = match params.start_time {
+        Some(ref s) if !s.is_empty() => Some(DateTime::parse_from_rfc3339(s).map_err(|_| {
+            (
+                axum::http::StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "code": 10004,
+                    "message": "Invalid start_time format, use RFC3339",
+                })),
+            )
+        })?.with_timezone(&Utc)),
+        _ => None,
+    };
+
+    let end_time = match params.end_time {
+        Some(ref s) if !s.is_empty() => Some(DateTime::parse_from_rfc3339(s).map_err(|_| {
+            (
+                axum::http::StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "code": 10004,
+                    "message": "Invalid end_time format, use RFC3339",
+                })),
+            )
+        })?.with_timezone(&Utc)),
+        _ => None,
+    };
+
+    let query_params = log_repo::LogQueryParams {
+        system: params.system,
+        service: params.service,
+        level: params.level,
+        keyword: params.keyword,
+        start_time,
+        end_time,
+        page: params.page,
+        size: params.size,
+    };
+
+    let (rows, total) = log_repo::query_logs(&state.pool, &query_params).await.map_err(|e| {
+        tracing::error!("Failed to query logs: {e}");
+        (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "code": 20001,
+                "message": "Failed to query logs",
+            })),
+        )
+    })?;
+
+    let data: Vec<serde_json::Value> = rows
+        .into_iter()
+        .map(|row| {
+            serde_json::json!({
+                "time": row.log_time,
+                "level": row.level,
+                "message": row.message,
+                "system": row.system,
+                "service": row.service,
+                "trace_id": row.trace_id,
+                "request_id": row.request_id,
+            })
+        })
+        .collect();
+
+    Ok(Json(serde_json::json!({
+        "code": 0,
+        "message": "ok",
+        "data": {
+            "total": total,
+            "data": data,
+        }
+    })))
+}
