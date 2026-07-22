@@ -41,12 +41,7 @@
       <div style="margin-bottom: 12px; color: #909399; font-size: 13px">
         共 {{ total }} 条记录
       </div>
-      <el-table :data="logs" border stripe style="width: 100%" @row-click="showDetail">
-        <el-table-column prop="time" label="日志时间" width="180">
-          <template #default="{ row }">
-            {{ formatTime(row.time) }}
-          </template>
-        </el-table-column>
+      <el-table :data="logs" border stripe style="width: 100%">
         <el-table-column prop="ingest_time" label="入库时间" width="180">
           <template #default="{ row }">
             {{ formatTime(row.ingest_time) }}
@@ -67,7 +62,7 @@
         </el-table-column>
         <el-table-column prop="function_name" label="函数" width="150" show-overflow-tooltip />
         <el-table-column prop="line_number" label="行号" width="70" />
-        <el-table-column prop="message" label="消息" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="message" label="消息" min-width="200" />
       </el-table>
       <div style="margin-top: 16px; display: flex; justify-content: center">
         <el-pagination
@@ -79,38 +74,18 @@
         />
       </div>
     </el-card>
-
-    <el-dialog v-model="detailVisible" title="日志详情" width="700px">
-      <el-descriptions :column="2" border>
-        <el-descriptions-item label="日志时间">{{ formatTime(detailLog?.time) }}</el-descriptions-item>
-        <el-descriptions-item label="入库时间">{{ formatTime(detailLog?.ingest_time) }}</el-descriptions-item>
-        <el-descriptions-item label="级别">
-          <el-tag :type="levelTag(detailLog?.level)" size="small">{{ detailLog?.level }}</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="服务">{{ detailLog?.service }}</el-descriptions-item>
-        <el-descriptions-item label="文件名">{{ detailLog?.file_name || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="函数名">{{ detailLog?.function_name || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="行号">{{ detailLog?.line_number || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="Trace ID">{{ detailLog?.trace_id || '-' }}</el-descriptions-item>
-      </el-descriptions>
-      <div style="margin-top: 16px">
-        <div style="font-weight: bold; margin-bottom: 8px">消息内容</div>
-        <pre style="white-space: pre-wrap; word-break: break-all; background: #f5f7fa; padding: 12px; border-radius: 4px; max-height: 300px; overflow-y: auto">{{ detailLog?.message }}</pre>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import { queryLogs } from '../api'
 
 const logs = ref<any[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
-const detailVisible = ref(false)
-const detailLog = ref<any>(null)
 
 const filters = reactive({
   service: undefined as string | undefined,
@@ -144,9 +119,15 @@ async function fetchLogs() {
   if (filters.start_time) params.start_time = filters.start_time.toISOString()
   if (filters.end_time) params.end_time = filters.end_time.toISOString()
 
-  const res = await queryLogs(params)
-  logs.value = res.data?.data || []
-  total.value = res.data?.total || 0
+  try {
+    const res = await queryLogs(params)
+    logs.value = res.data?.data || []
+    total.value = res.data?.total || 0
+  } catch {
+    ElMessage.error('查询日志失败，请检查服务是否正常')
+    logs.value = []
+    total.value = 0
+  }
 }
 
 function handleSearch() {
@@ -169,11 +150,6 @@ function handleReset() {
 function handlePageChange(p: number) {
   page.value = p
   fetchLogs()
-}
-
-function showDetail(row: any) {
-  detailLog.value = row
-  detailVisible.value = true
 }
 
 onMounted(() => {
