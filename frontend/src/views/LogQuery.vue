@@ -4,9 +4,6 @@
 
     <el-card style="margin-bottom: 16px">
       <el-form :inline="true" :model="filters">
-        <el-form-item label="系统">
-          <el-input v-model="filters.system" placeholder="系统名称(模糊)" clearable style="width: 150px" />
-        </el-form-item>
         <el-form-item label="服务">
           <el-input v-model="filters.service" placeholder="服务名称(模糊)" clearable style="width: 150px" />
         </el-form-item>
@@ -45,12 +42,12 @@
         共 {{ total }} 条记录
       </div>
       <el-table :data="logs" border stripe style="width: 100%" @row-click="showDetail">
-        <el-table-column prop="time" label="日志时间" width="170">
+        <el-table-column prop="time" label="日志时间" width="180">
           <template #default="{ row }">
             {{ formatTime(row.time) }}
           </template>
         </el-table-column>
-        <el-table-column prop="ingest_time" label="入库时间" width="170">
+        <el-table-column prop="ingest_time" label="入库时间" width="180">
           <template #default="{ row }">
             {{ formatTime(row.ingest_time) }}
           </template>
@@ -60,10 +57,15 @@
             <el-tag :type="levelTag(row.level)" size="small">{{ row.level }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="system" label="系统" width="120" />
         <el-table-column prop="service" label="服务" width="120" />
-        <el-table-column prop="file_name" label="文件" width="150" show-overflow-tooltip />
-        <el-table-column prop="function_name" label="函数" width="120" show-overflow-tooltip />
+        <el-table-column prop="file_name" label="文件" width="120">
+          <template #default="{ row }">
+            <el-tooltip :content="row.file_name" placement="top" :disabled="!row.file_name || !row.file_name.includes('/')">
+              <span>{{ row.file_name ? row.file_name.split('/').pop() : '' }}</span>
+            </el-tooltip>
+          </template>
+        </el-table-column>
+        <el-table-column prop="function_name" label="函数" width="150" show-overflow-tooltip />
         <el-table-column prop="line_number" label="行号" width="70" />
         <el-table-column prop="message" label="消息" min-width="200" show-overflow-tooltip />
       </el-table>
@@ -85,13 +87,11 @@
         <el-descriptions-item label="级别">
           <el-tag :type="levelTag(detailLog?.level)" size="small">{{ detailLog?.level }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="系统">{{ detailLog?.system }}</el-descriptions-item>
         <el-descriptions-item label="服务">{{ detailLog?.service }}</el-descriptions-item>
         <el-descriptions-item label="文件名">{{ detailLog?.file_name || '-' }}</el-descriptions-item>
         <el-descriptions-item label="函数名">{{ detailLog?.function_name || '-' }}</el-descriptions-item>
         <el-descriptions-item label="行号">{{ detailLog?.line_number || '-' }}</el-descriptions-item>
         <el-descriptions-item label="Trace ID">{{ detailLog?.trace_id || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="Request ID">{{ detailLog?.request_id || '-' }}</el-descriptions-item>
       </el-descriptions>
       <div style="margin-top: 16px">
         <div style="font-weight: bold; margin-bottom: 8px">消息内容</div>
@@ -113,7 +113,6 @@ const detailVisible = ref(false)
 const detailLog = ref<any>(null)
 
 const filters = reactive({
-  system: undefined as string | undefined,
   service: undefined as string | undefined,
   level: undefined as string | undefined,
   keyword: undefined as string | undefined,
@@ -137,7 +136,6 @@ function levelTag(level: string) {
 
 async function fetchLogs() {
   const params: any = { page: page.value, size: pageSize.value }
-  if (filters.system) params.system = filters.system
   if (filters.service) params.service = filters.service
   if (filters.level) params.level = filters.level
   if (filters.keyword) params.keyword = filters.keyword
@@ -157,7 +155,6 @@ function handleSearch() {
 }
 
 function handleReset() {
-  filters.system = undefined
   filters.service = undefined
   filters.level = undefined
   filters.keyword = undefined

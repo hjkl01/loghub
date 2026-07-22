@@ -8,12 +8,9 @@ pub struct IngestLogRequest {
     pub timestamp: DateTime<Utc>,
     pub level: String,
     pub message: String,
-    /// System name (e.g. "order-system", "payment-service")
-    pub system: String,
     /// Service name (e.g. "order-api", "payment-worker")
     pub service: String,
     pub trace_id: Option<String>,
-    pub request_id: Option<String>,
     /// Source file name
     pub file_name: Option<String>,
     /// Source function name

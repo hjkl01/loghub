@@ -15,9 +15,6 @@
 
     <el-card style="margin-bottom: 16px">
       <el-form :inline="true" :model="filters">
-        <el-form-item label="系统">
-          <el-input v-model="filters.system" placeholder="系统名称(模糊)" clearable style="width: 150px" />
-        </el-form-item>
         <el-form-item label="级别">
           <el-select v-model="filters.levels" placeholder="全部级别" multiple clearable style="width: 200px">
             <el-option label="DEBUG" value="DEBUG" />
@@ -37,7 +34,7 @@
         <div v-for="(log, idx) in logs" :key="idx" style="display: flex; gap: 8px; cursor: pointer" @click="showDetail(log)">
           <span style="color: #888; min-width: 160px">{{ formatTime(log.time) }}</span>
           <span :style="{ color: levelColor(log.level), minWidth: '50px', fontWeight: 'bold' }">{{ log.level }}</span>
-          <span style="color: #b0b0b0; min-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ log.system }}/{{ log.service }}</span>
+          <span style="color: #b0b0b0; min-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ log.service }}</span>
           <span v-if="log.file_name" style="color: #6a9955; min-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ log.file_name }}:{{ log.line_number }}</span>
           <span>{{ log.message }}</span>
         </div>
@@ -51,13 +48,10 @@
         <el-descriptions-item label="级别">
           <el-tag :type="levelTag(detailLog?.level)" size="small">{{ detailLog?.level }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="系统">{{ detailLog?.system }}</el-descriptions-item>
         <el-descriptions-item label="服务">{{ detailLog?.service }}</el-descriptions-item>
         <el-descriptions-item label="文件名">{{ detailLog?.file_name || '-' }}</el-descriptions-item>
         <el-descriptions-item label="函数名">{{ detailLog?.function_name || '-' }}</el-descriptions-item>
         <el-descriptions-item label="行号">{{ detailLog?.line_number || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="Trace ID">{{ detailLog?.trace_id || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="Request ID">{{ detailLog?.request_id || '-' }}</el-descriptions-item>
       </el-descriptions>
       <div style="margin-top: 16px">
         <div style="font-weight: bold; margin-bottom: 8px">消息内容</div>
@@ -78,7 +72,6 @@ const detailVisible = ref(false)
 const detailLog = ref<any>(null)
 
 const filters = reactive({
-  system: undefined as string | undefined,
   levels: [] as string[],
 })
 
@@ -151,7 +144,6 @@ function connect() {
 function sendFilter() {
   if (!ws || ws.readyState !== WebSocket.OPEN) return
   const msg: any = {}
-  if (filters.system) msg.system = filters.system
   if (filters.levels.length > 0) msg.level = filters.levels
   ws.send(JSON.stringify(msg))
 }

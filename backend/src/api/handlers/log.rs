@@ -9,8 +9,6 @@ use crate::AppState;
 
 #[derive(serde::Deserialize, utoipa::IntoParams)]
 pub struct LogQueryString {
-    /// System name filter
-    pub system: Option<String>,
     /// Service name filter
     pub service: Option<String>,
     /// Log level filter (e.g. ERROR, WARN, INFO)
@@ -52,10 +50,8 @@ pub async fn ingest(
         req.timestamp,
         &req.level,
         &req.message,
-        &req.system,
         &req.service,
         req.trace_id.as_deref(),
-        req.request_id.as_deref(),
         req.file_name.as_deref(),
         req.function_name.as_deref(),
         req.line_number,
@@ -78,10 +74,8 @@ pub async fn ingest(
         log_time: req.timestamp,
         level: req.level.clone(),
         message: req.message.clone(),
-        system: req.system.clone(),
         service: req.service.clone(),
         trace_id: req.trace_id.clone(),
-        request_id: req.request_id.clone(),
         file_name: req.file_name.clone(),
         function_name: req.function_name.clone(),
         line_number: req.line_number,
@@ -142,7 +136,6 @@ pub async fn list(
     };
 
     let query_params = log_repo::LogQueryParams {
-        system: params.system,
         service: params.service,
         level: params.level,
         keyword: params.keyword,
@@ -173,10 +166,8 @@ pub async fn list(
                 "ingest_time": row.ingest_time,
                 "level": row.level,
                 "message": row.message,
-                "system": row.system,
                 "service": row.service,
                 "trace_id": row.trace_id,
-                "request_id": row.request_id,
                 "file_name": row.file_name,
                 "function_name": row.function_name,
                 "line_number": row.line_number,

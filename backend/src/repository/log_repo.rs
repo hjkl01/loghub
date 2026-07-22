@@ -3,32 +3,29 @@ use chrono::{DateTime, Utc};
 use serde_json::Value;
 use sqlx::PgPool;
 
+#[allow(clippy::too_many_arguments)]
 pub async fn insert_log(
     pool: &PgPool,
     log_time: DateTime<Utc>,
     level: &str,
     message: &str,
-    system: &str,
     service: &str,
     trace_id: Option<&str>,
-    request_id: Option<&str>,
     file_name: Option<&str>,
     function_name: Option<&str>,
     line_number: Option<i32>,
     extra: &Value,
 ) -> Result<i64> {
     let row = sqlx::query_scalar::<_, i64>(
-        r#"INSERT INTO logs (log_time, ingest_time, level, message, system, service, trace_id, request_id, file_name, function_name, line_number, extra)
-        VALUES ($1, NOW(), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        r#"INSERT INTO logs (log_time, ingest_time, level, message, service, trace_id, file_name, function_name, line_number, extra)
+        VALUES ($1, NOW(), $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING id"#,
     )
     .bind(log_time)
     .bind(level)
     .bind(message)
-    .bind(system)
     .bind(service)
     .bind(trace_id)
-    .bind(request_id)
     .bind(file_name)
     .bind(function_name)
     .bind(line_number)
@@ -46,10 +43,8 @@ pub struct LogQueryRow {
     pub ingest_time: DateTime<Utc>,
     pub level: String,
     pub message: String,
-    pub system: String,
     pub service: String,
     pub trace_id: Option<String>,
-    pub request_id: Option<String>,
     pub file_name: Option<String>,
     pub function_name: Option<String>,
     pub line_number: Option<i32>,
@@ -67,10 +62,6 @@ pub async fn query_logs(
     let mut where_clauses: Vec<String> = Vec::new();
     let mut idx = 1u32;
 
-    if params.system.is_some() {
-        where_clauses.push(format!("system ILIKE ${idx}"));
-        idx += 1;
-    }
     if params.service.is_some() {
         where_clauses.push(format!("service ILIKE ${idx}"));
         idx += 1;
@@ -115,7 +106,7 @@ pub async fn query_logs(
     let offset_idx = idx + 1;
 
     let data_sql = format!(
-        r#"SELECT id, log_time, ingest_time, level, message, system, service, trace_id, request_id, file_name, function_name, line_number, extra
+        r#"SELECT id, log_time, ingest_time, level, message, service, trace_id, file_name, function_name, line_number, extra
         FROM logs
         {}
         ORDER BY log_time DESC
@@ -128,11 +119,6 @@ pub async fn query_logs(
     let mut count_query = sqlx::query_scalar::<_, i64>(&count_sql);
     let mut data_query = sqlx::query_as::<_, LogQueryRow>(&data_sql);
 
-    if let Some(ref system) = params.system {
-        let p = format!("%{}%", system);
-        count_query = count_query.bind(p.clone());
-        data_query = data_query.bind(p);
-    }
     if let Some(ref service) = params.service {
         let p = format!("%{}%", service);
         count_query = count_query.bind(p.clone());
@@ -175,7 +161,6 @@ pub async fn query_logs(
 
 #[derive(Debug, serde::Deserialize)]
 pub struct LogQueryParams {
-    pub system: Option<String>,
     pub service: Option<String>,
     pub level: Option<String>,
     pub keyword: Option<String>,

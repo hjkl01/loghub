@@ -4,17 +4,14 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: loghub
-      POSTGRES_USER: loghub
-      POSTGRES_PASSWORD: loghub
-      TZ: Asia/Shanghai
+      - TZ=Asia/Shanghai
+      - POSTGRES_DB=loghub
+      - POSTGRES_USER=loghub
+      - POSTGRES_PASSWORD=loghub
     volumes:
       - ./data/pgdata:/var/lib/postgresql/data
     ports:
       - "5431:5432"
-    command: >
-      postgres
-        --timezone=Asia/Shanghai
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U loghub"]
       interval: 5s

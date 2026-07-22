@@ -17,10 +17,8 @@ pub struct LogEvent {
     pub log_time: DateTime<Utc>,
     pub level: String,
     pub message: String,
-    pub system: String,
     pub service: String,
     pub trace_id: Option<String>,
-    pub request_id: Option<String>,
     pub file_name: Option<String>,
     pub function_name: Option<String>,
     pub line_number: Option<i32>,
@@ -41,7 +39,6 @@ impl WsState {
 
 #[derive(Deserialize, Clone)]
 struct WsFilter {
-    system: Option<String>,
     service: Option<String>,
     level: Option<Vec<String>>,
 }
@@ -65,11 +62,6 @@ async fn handle_socket(socket: WebSocket, ws_state: Arc<WsState>) {
         while let Ok(event) = rx.recv().await {
             let f = send_filter.lock().await;
             if let Some(ref f) = *f {
-                if let Some(ref system) = f.system {
-                    if &event.system != system {
-                        continue;
-                    }
-                }
                 if let Some(ref service) = f.service {
                     if &event.service != service {
                         continue;
@@ -90,10 +82,8 @@ async fn handle_socket(socket: WebSocket, ws_state: Arc<WsState>) {
                     "time": event.log_time,
                     "level": event.level,
                     "message": event.message,
-                    "system": event.system,
                     "service": event.service,
                     "trace_id": event.trace_id,
-                    "request_id": event.request_id,
                     "file_name": event.file_name,
                     "function_name": event.function_name,
                     "line_number": event.line_number,
