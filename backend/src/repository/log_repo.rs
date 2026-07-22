@@ -12,11 +12,14 @@ pub async fn insert_log(
     service: &str,
     trace_id: Option<&str>,
     request_id: Option<&str>,
+    file_name: Option<&str>,
+    function_name: Option<&str>,
+    line_number: Option<i32>,
     extra: &Value,
 ) -> Result<i64> {
     let row = sqlx::query_scalar::<_, i64>(
-        r#"INSERT INTO logs (log_time, ingest_time, level, message, system, service, trace_id, request_id, extra)
-        VALUES ($1, NOW(), $2, $3, $4, $5, $6, $7, $8)
+        r#"INSERT INTO logs (log_time, ingest_time, level, message, system, service, trace_id, request_id, file_name, function_name, line_number, extra)
+        VALUES ($1, NOW(), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING id"#,
     )
     .bind(log_time)
@@ -26,6 +29,9 @@ pub async fn insert_log(
     .bind(service)
     .bind(trace_id)
     .bind(request_id)
+    .bind(file_name)
+    .bind(function_name)
+    .bind(line_number)
     .bind(extra)
     .fetch_one(pool)
     .await?;
@@ -37,12 +43,16 @@ pub async fn insert_log(
 pub struct LogQueryRow {
     pub id: i64,
     pub log_time: DateTime<Utc>,
+    pub ingest_time: DateTime<Utc>,
     pub level: String,
     pub message: String,
     pub system: String,
     pub service: String,
     pub trace_id: Option<String>,
     pub request_id: Option<String>,
+    pub file_name: Option<String>,
+    pub function_name: Option<String>,
+    pub line_number: Option<i32>,
     pub extra: Value,
 }
 
@@ -58,11 +68,11 @@ pub async fn query_logs(
     let mut idx = 1u32;
 
     if params.system.is_some() {
-        where_clauses.push(format!("system = ${idx}"));
+        where_clauses.push(format!("system ILIKE ${idx}"));
         idx += 1;
     }
     if params.service.is_some() {
-        where_clauses.push(format!("service = ${idx}"));
+        where_clauses.push(format!("service ILIKE ${idx}"));
         idx += 1;
     }
     if params.level.is_some() {
@@ -71,6 +81,14 @@ pub async fn query_logs(
     }
     if params.keyword.is_some() {
         where_clauses.push(format!("message ILIKE ${idx}"));
+        idx += 1;
+    }
+    if params.file_name.is_some() {
+        where_clauses.push(format!("file_name ILIKE ${idx}"));
+        idx += 1;
+    }
+    if params.function_name.is_some() {
+        where_clauses.push(format!("function_name ILIKE ${idx}"));
         idx += 1;
     }
     if params.start_time.is_some() {
@@ -97,7 +115,7 @@ pub async fn query_logs(
     let offset_idx = idx + 1;
 
     let data_sql = format!(
-        r#"SELECT id, log_time, level, message, system, service, trace_id, request_id, extra
+        r#"SELECT id, log_time, ingest_time, level, message, system, service, trace_id, request_id, file_name, function_name, line_number, extra
         FROM logs
         {}
         ORDER BY log_time DESC
@@ -111,12 +129,14 @@ pub async fn query_logs(
     let mut data_query = sqlx::query_as::<_, LogQueryRow>(&data_sql);
 
     if let Some(ref system) = params.system {
-        count_query = count_query.bind(system);
-        data_query = data_query.bind(system);
+        let p = format!("%{}%", system);
+        count_query = count_query.bind(p.clone());
+        data_query = data_query.bind(p);
     }
     if let Some(ref service) = params.service {
-        count_query = count_query.bind(service);
-        data_query = data_query.bind(service);
+        let p = format!("%{}%", service);
+        count_query = count_query.bind(p.clone());
+        data_query = data_query.bind(p);
     }
     if let Some(ref level) = params.level {
         count_query = count_query.bind(level);
@@ -124,6 +144,16 @@ pub async fn query_logs(
     }
     if let Some(ref p) = pattern {
         count_query = count_query.bind(p);
+        data_query = data_query.bind(p);
+    }
+    if let Some(ref file_name) = params.file_name {
+        let p = format!("%{}%", file_name);
+        count_query = count_query.bind(p.clone());
+        data_query = data_query.bind(p);
+    }
+    if let Some(ref function_name) = params.function_name {
+        let p = format!("%{}%", function_name);
+        count_query = count_query.bind(p.clone());
         data_query = data_query.bind(p);
     }
     if let Some(start_time) = params.start_time {
@@ -149,6 +179,8 @@ pub struct LogQueryParams {
     pub service: Option<String>,
     pub level: Option<String>,
     pub keyword: Option<String>,
+    pub file_name: Option<String>,
+    pub function_name: Option<String>,
     pub start_time: Option<DateTime<Utc>>,
     pub end_time: Option<DateTime<Utc>>,
     pub page: Option<i64>,

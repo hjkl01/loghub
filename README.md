@@ -113,6 +113,9 @@ Content-Type: application/json
   "service": "order-api",
   "trace_id": "abc123",
   "request_id": "req001",
+  "file_name": "app/db.py",
+  "function_name": "connect",
+  "line_number": 42,
   "extra": {
     "user_id": 42,
     "retry_count": 3
@@ -131,6 +134,9 @@ Content-Type: application/json
 | service | string | ✅ | 服务名称（如 "order-api"） |
 | trace_id | string | ❌ | 链路追踪 ID |
 | request_id | string | ❌ | 请求 ID |
+| file_name | string | ❌ | 源文件名（如 "app/db.py"） |
+| function_name | string | ❌ | 函数名（如 "connect"） |
+| line_number | integer | ❌ | 行号（如 42） |
 | extra | object | ❌ | 扩展字段（JSONB 存储） |
 
 ### Python 接入
@@ -202,6 +208,9 @@ class LogHubHandler(logging.Handler):
                 "message": self.format(record),
                 "system": self.system,
                 "service": self.service,
+                "file_name": record.filename,
+                "function_name": record.funcName,
+                "line_number": record.lineno,
                 "extra": extra if extra else None,
             }
 
@@ -250,11 +259,9 @@ def loghub_sink(message):
         "message": record["message"],
         "system": "my-system",
         "service": "my-service",
-        "extra": {
-            "file": record["file"].path,
-            "line": record["line"],
-            "function": record["function"],
-        },
+        "file_name": record["file"].name,
+        "function_name": record["function"],
+        "line_number": record["line"],
     }
     try:
         requests.post("http://localhost:8080/api/logs", json=payload, timeout=3)
@@ -289,6 +296,12 @@ struct LogEntry {
     trace_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     request_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    file_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    function_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    line_number: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     extra: Option<Value>,
 }

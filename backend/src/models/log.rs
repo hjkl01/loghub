@@ -14,5 +14,11 @@ pub struct IngestLogRequest {
     pub service: String,
     pub trace_id: Option<String>,
     pub request_id: Option<String>,
+    /// Source file name
+    pub file_name: Option<String>,
+    /// Source function name
+    pub function_name: Option<String>,
+    /// Source line number
+    pub line_number: Option<i32>,
     pub extra: Option<Value>,
 }

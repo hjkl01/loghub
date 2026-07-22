@@ -43,12 +43,16 @@ export async function getMe() {
 
 export interface LogItem {
   time: string
+  ingest_time: string
   level: string
   system: string
   service: string
   message: string
   trace_id?: string
   request_id?: string
+  file_name?: string
+  function_name?: string
+  line_number?: number
 }
 
 export interface LogQueryResult {
@@ -61,6 +65,8 @@ export interface LogQueryParams {
   service?: string
   level?: string
   keyword?: string
+  file_name?: string
+  function_name?: string
   start_time?: string
   end_time?: string
   page?: number

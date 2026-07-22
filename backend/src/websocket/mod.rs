@@ -21,6 +21,9 @@ pub struct LogEvent {
     pub service: String,
     pub trace_id: Option<String>,
     pub request_id: Option<String>,
+    pub file_name: Option<String>,
+    pub function_name: Option<String>,
+    pub line_number: Option<i32>,
     pub extra: Value,
 }
 
@@ -91,6 +94,9 @@ async fn handle_socket(socket: WebSocket, ws_state: Arc<WsState>) {
                     "service": event.service,
                     "trace_id": event.trace_id,
                     "request_id": event.request_id,
+                    "file_name": event.file_name,
+                    "function_name": event.function_name,
+                    "line_number": event.line_number,
                 }
             });
 

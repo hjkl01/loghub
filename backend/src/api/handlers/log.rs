@@ -17,6 +17,10 @@ pub struct LogQueryString {
     pub level: Option<String>,
     /// Keyword search (ILIKE on message)
     pub keyword: Option<String>,
+    /// File name filter (ILIKE)
+    pub file_name: Option<String>,
+    /// Function name filter (ILIKE)
+    pub function_name: Option<String>,
     /// Start time (RFC3339)
     pub start_time: Option<String>,
     /// End time (RFC3339)
@@ -52,6 +56,9 @@ pub async fn ingest(
         &req.service,
         req.trace_id.as_deref(),
         req.request_id.as_deref(),
+        req.file_name.as_deref(),
+        req.function_name.as_deref(),
+        req.line_number,
         &extra,
     )
     .await
@@ -75,6 +82,9 @@ pub async fn ingest(
         service: req.service.clone(),
         trace_id: req.trace_id.clone(),
         request_id: req.request_id.clone(),
+        file_name: req.file_name.clone(),
+        function_name: req.function_name.clone(),
+        line_number: req.line_number,
         extra: extra.clone(),
     };
 
@@ -136,6 +146,8 @@ pub async fn list(
         service: params.service,
         level: params.level,
         keyword: params.keyword,
+        file_name: params.file_name,
+        function_name: params.function_name,
         start_time,
         end_time,
         page: params.page,
@@ -158,12 +170,17 @@ pub async fn list(
         .map(|row| {
             serde_json::json!({
                 "time": row.log_time,
+                "ingest_time": row.ingest_time,
                 "level": row.level,
                 "message": row.message,
                 "system": row.system,
                 "service": row.service,
                 "trace_id": row.trace_id,
                 "request_id": row.request_id,
+                "file_name": row.file_name,
+                "function_name": row.function_name,
+                "line_number": row.line_number,
+                "extra": row.extra,
             })
         })
         .collect();
