@@ -7,6 +7,14 @@ use crate::config::AdminConfig;
 pub async fn create_pool(database_url: &str) -> Result<PgPool> {
     let pool = PgPoolOptions::new()
         .max_connections(20)
+        .after_connect(|conn, _meta| {
+            Box::pin(async move {
+                sqlx::query("SET TIMEZONE = 'Asia/Shanghai'")
+                    .execute(conn)
+                    .await?;
+                Ok(())
+            })
+        })
         .connect(database_url)
         .await?;
     Ok(pool)

@@ -1,11 +1,11 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct IngestLogRequest {
-    pub timestamp: DateTime<Utc>,
+    pub timestamp: DateTime<Local>,
     pub level: String,
     pub message: String,
     /// Service name (e.g. "order-api", "payment-worker")

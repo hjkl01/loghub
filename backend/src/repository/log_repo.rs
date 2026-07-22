@@ -1,12 +1,12 @@
 use anyhow::Result;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use serde_json::Value;
 use sqlx::PgPool;
 
 #[allow(clippy::too_many_arguments)]
 pub async fn insert_log(
     pool: &PgPool,
-    log_time: DateTime<Utc>,
+    log_time: DateTime<Local>,
     level: &str,
     message: &str,
     service: &str,
@@ -39,8 +39,8 @@ pub async fn insert_log(
 #[derive(Debug, serde::Serialize, sqlx::FromRow)]
 pub struct LogQueryRow {
     pub id: i64,
-    pub log_time: DateTime<Utc>,
-    pub ingest_time: DateTime<Utc>,
+    pub log_time: DateTime<Local>,
+    pub ingest_time: DateTime<Local>,
     pub level: String,
     pub message: String,
     pub service: String,
@@ -166,8 +166,8 @@ pub struct LogQueryParams {
     pub keyword: Option<String>,
     pub file_name: Option<String>,
     pub function_name: Option<String>,
-    pub start_time: Option<DateTime<Utc>>,
-    pub end_time: Option<DateTime<Utc>>,
+    pub start_time: Option<DateTime<Local>>,
+    pub end_time: Option<DateTime<Local>>,
     pub page: Option<i64>,
     pub size: Option<i64>,
 }

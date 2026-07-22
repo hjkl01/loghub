@@ -30,7 +30,8 @@ RUN pnpm build
 # ---- Runtime ----
 FROM debian:bookworm-slim
 RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
+ENV TZ=Asia/Shanghai
 COPY --from=backend-builder /app/target/release/loghub-backend /usr/local/bin/loghub-backend
 COPY --from=backend-builder /app/backend/migrations /app/migrations
 COPY .env /app/.env

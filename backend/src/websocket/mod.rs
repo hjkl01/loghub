@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{State, WebSocketUpgrade};
 use axum::response::IntoResponse;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
 use serde_json::Value;
@@ -14,7 +14,7 @@ use crate::AppState;
 #[derive(Clone, Debug)]
 pub struct LogEvent {
     pub id: i64,
-    pub log_time: DateTime<Utc>,
+    pub log_time: DateTime<Local>,
     pub level: String,
     pub message: String,
     pub service: String,

@@ -1,6 +1,6 @@
 use axum::extract::{Query, State};
 use axum::Json;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 
 use crate::models::log::IngestLogRequest;
 use crate::repository::log_repo;
@@ -118,7 +118,7 @@ pub async fn list(
                     "message": "Invalid start_time format, use RFC3339",
                 })),
             )
-        })?.with_timezone(&Utc)),
+        })?.with_timezone(&Local)),
         _ => None,
     };
 
@@ -131,7 +131,7 @@ pub async fn list(
                     "message": "Invalid end_time format, use RFC3339",
                 })),
             )
-        })?.with_timezone(&Utc)),
+        })?.with_timezone(&Local)),
         _ => None,
     };
 
