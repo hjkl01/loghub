@@ -54,6 +54,7 @@ async fn health_check() -> axum::Json<serde_json::Value> {
         api::handlers::auth::me,
         api::handlers::log::ingest,
         api::handlers::log::list,
+        api::handlers::log::services,
     ),
     components(schemas(
         models::user::LoginRequest,
@@ -112,6 +113,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/auth/login", post(api::handlers::auth::login))
         .route("/api/auth/me", get(api::handlers::auth::me))
         .route("/api/logs", get(api::handlers::log::list).post(api::handlers::log::ingest))
+        .route("/api/logs/services", get(api::handlers::log::services))
         .route("/api/logs/ws", get(websocket::ws_handler))
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi))
         .layer(CorsLayer::permissive())

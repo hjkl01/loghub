@@ -39,7 +39,7 @@ impl WsState {
 
 #[derive(Deserialize, Clone)]
 struct WsFilter {
-    service: Option<String>,
+    service: Option<Vec<String>>,
     level: Option<Vec<String>>,
 }
 
@@ -62,8 +62,8 @@ async fn handle_socket(socket: WebSocket, ws_state: Arc<WsState>) {
         while let Ok(event) = rx.recv().await {
             let f = send_filter.lock().await;
             if let Some(ref f) = *f {
-                if let Some(ref service) = f.service {
-                    if &event.service != service {
+                if let Some(ref services) = f.service {
+                    if !services.is_empty() && !services.contains(&event.service) {
                         continue;
                     }
                 }

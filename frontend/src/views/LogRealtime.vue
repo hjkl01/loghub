@@ -15,6 +15,11 @@
 
     <el-card style="margin-bottom: 16px">
       <el-form :inline="true" :model="filters">
+        <el-form-item label="服务">
+          <el-select v-model="filters.services" placeholder="全部服务" multiple clearable filterable style="width: 220px">
+            <el-option v-for="s in serviceOptions" :key="s" :label="s" :value="s" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="级别">
           <el-select v-model="filters.levels" placeholder="全部级别" multiple clearable style="width: 200px">
             <el-option label="DEBUG" value="DEBUG" />
@@ -63,6 +68,8 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ElMessage } from 'element-plus'
+import { getServices } from '../api'
 
 const logs = ref<any[]>([])
 const connected = ref(false)
@@ -72,8 +79,20 @@ const detailVisible = ref(false)
 const detailLog = ref<any>(null)
 
 const filters = reactive({
+  services: [] as string[],
   levels: [] as string[],
 })
+
+const serviceOptions = ref<string[]>([])
+
+async function loadServices() {
+  try {
+    const res = await getServices()
+    serviceOptions.value = res.data || []
+  } catch {
+    ElMessage.error('获取服务列表失败')
+  }
+}
 
 let ws: WebSocket | null = null
 let reconnectTimer: any = null
@@ -144,6 +163,7 @@ function connect() {
 function sendFilter() {
   if (!ws || ws.readyState !== WebSocket.OPEN) return
   const msg: any = {}
+  if (filters.services.length > 0) msg.service = filters.services
   if (filters.levels.length > 0) msg.level = filters.levels
   ws.send(JSON.stringify(msg))
 }
@@ -162,6 +182,7 @@ watch(filters, () => {
 }, { deep: true })
 
 onMounted(() => {
+  loadServices()
   connect()
 })
 

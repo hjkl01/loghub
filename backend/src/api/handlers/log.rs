@@ -97,6 +97,36 @@ pub async fn ingest(
 
 #[utoipa::path(
     get,
+    path = "/api/logs/services",
+    tag = "logs",
+    responses(
+        (status = 200, description = "Distinct service names", body = Value),
+        (status = 500, description = "Internal server error", body = Value),
+    )
+)]
+pub async fn services(
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, (axum::http::StatusCode, Json<serde_json::Value>)> {
+    let list = log_repo::list_services(&state.pool).await.map_err(|e| {
+        tracing::error!("Failed to list services: {e}");
+        (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "code": 20001,
+                "message": "Failed to list services",
+            })),
+        )
+    })?;
+
+    Ok(Json(serde_json::json!({
+        "code": 0,
+        "message": "ok",
+        "data": list,
+    })))
+}
+
+#[utoipa::path(
+    get,
     path = "/api/logs",
     tag = "logs",
     params(LogQueryString),

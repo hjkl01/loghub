@@ -75,4 +75,9 @@ export async function queryLogs(params: LogQueryParams) {
   return res.data
 }
 
+export async function getServices() {
+  const res = await api.get<ApiResponse<string[]>>('/logs/services')
+  return res.data
+}
+
 export default api

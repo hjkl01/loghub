@@ -36,6 +36,15 @@ pub async fn insert_log(
     Ok(row)
 }
 
+pub async fn list_services(pool: &PgPool) -> Result<Vec<String>> {
+    let rows = sqlx::query_scalar::<_, String>(
+        r#"SELECT DISTINCT service FROM logs WHERE service IS NOT NULL AND service <> '' ORDER BY service"#,
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(rows)
+}
+
 #[derive(Debug, serde::Serialize, sqlx::FromRow)]
 pub struct LogQueryRow {
     pub id: i64,
