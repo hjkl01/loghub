@@ -1,6 +1,15 @@
-.PHONY: help dev build run clean migrate lint test docker-up docker-down
+.PHONY: help ensure-env dev build run clean migrate lint test docker-up docker-down
 
 .DEFAULT_GOAL := help
+
+# 检查 .env 是否已从 .env.example 复制, 不存在则自动复制
+ensure-env:
+	@if [ ! -f .env ]; then \
+		echo "==> .env 不存在, 自动从 .env.example 复制"; \
+		cp .env.example .env; \
+	else \
+		echo "==> .env 已存在"; \
+	fi
 
 help:
 	@echo "LogHub 管理命令"
@@ -36,63 +45,63 @@ help:
 	@echo "  make all          构建后端+前端"
 
 # Backend
-dev: frontend-build
+dev: ensure-env frontend-build
 	cargo install cargo-watch && cargo watch -x run -w backend/src
 
-build: frontend-build
+build: ensure-env frontend-build
 	cargo build --release
 
-run: frontend-build
+run: ensure-env frontend-build
 	cargo run --release
 
-clean:
+clean: ensure-env
 	cargo clean
 
-migrate:
+migrate: ensure-env
 	cargo run --release -- migrate
 
-lint:
+lint: ensure-env
 	cargo clippy -- -D warnings
 
-test:
+test: ensure-env
 	cargo test
 
 # Docker
-docker-up:
+docker-up: ensure-env
 	docker-compose up -d
 
-docker-down:
+docker-down: ensure-env
 	docker-compose down
 
-docker-build:
+docker-build: ensure-env
 	docker-compose build
 
-docker-logs:
+docker-logs: ensure-env
 	docker-compose logs -f
 
 # Database
-db-create:
+db-create: ensure-env
 	createdb -U postgres loghub
 
-db-drop:
+db-drop: ensure-env
 	dropdb -U postgres loghub
 
-db-reset: db-drop db-create migrate
+db-reset: ensure-env db-drop db-create migrate
 
 # Frontend
-frontend-install:
+frontend-install: ensure-env
 	cd frontend && pnpm install
 
-frontend-dev: frontend-install
+frontend-dev: ensure-env frontend-install
 	cd frontend && pnpm dev
 
-frontend-build: frontend-install
+frontend-build: ensure-env frontend-install
 	cd frontend && pnpm build
 
-frontend-lint: frontend-install
+frontend-lint: ensure-env frontend-install
 	cd frontend && pnpm lint
 
 # All
-setup: db-create migrate frontend-install
+setup: ensure-env db-create migrate frontend-install
 
 all: build frontend-build
