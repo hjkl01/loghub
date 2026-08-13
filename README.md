@@ -61,6 +61,7 @@ cargo run --release
 | `LOG__AUTH__JWT_SECRET` | JWT 密钥 | loghub-secret-key-change-in-production |
 | `LOG__ADMIN__USERNAME` | 初始管理员用户名 | admin |
 | `LOG__ADMIN__PASSWORD` | 初始管理员密码 | admin123 |
+| `LOG__FRONTEND__DIST` | 前端构建产物目录 | frontend/dist |
 
 ## API 接口
 

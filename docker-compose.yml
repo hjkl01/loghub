@@ -2,7 +2,7 @@
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     environment:
       - TZ=Asia/Shanghai
       - POSTGRES_DB=loghub
@@ -30,8 +30,9 @@ services:
       LOG__SERVER__PORT: "8080"
       LOG__ADMIN__USERNAME: admin
       LOG__ADMIN__PASSWORD: admin123
+      LOG__FRONTEND__DIST: /app/frontend/dist
     ports:
-      - "8080:8080"
+      - "8180:8080"
     depends_on:
       postgres:
         condition: service_healthy
